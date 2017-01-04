@@ -1,0 +1,3 @@
+[submodule "gige_record_x64"]
+	path = gige_record_x64
+	url = https://github.com/kristinbranson/gige_record_x64
