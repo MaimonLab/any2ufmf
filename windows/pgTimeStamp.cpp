@@ -47,5 +47,5 @@ double pg_timestamp(IplImage* frame)
 uint32_t extract_bits(uint32_t num, uint8_t nbits, uint8_t start)
 {
 	uint32_t mask = ((1 << nbits) - 1) << start;  // create mask
-	return num & mask;
+	return (num & mask) >> start;
 }
