@@ -45,8 +45,8 @@ double pg_timestamp(IplImage* frame)
 	//printf("\n");
 
 	//Extract bits (0 is right most bit)
-	uint32_t second_count = extract_bits(ts_raw, 7, 25);  //was 31
-	uint32_t cycle_count = extract_bits(ts_raw, 13, 12);  //was 31-7
+	uint32_t second_count = extract_bits(ts_raw, 7, 25);
+	uint32_t cycle_count = extract_bits(ts_raw, 13, 12);
 	uint32_t cycle_offset = extract_bits(ts_raw, 12, 0);
 	
 	//printbinary(second_count);

@@ -10,6 +10,8 @@
 #include "ufmfWriter.h"
 #include "previewVideo.h"
 
+#include "pgTimeStamp.h"
+
 typedef enum {
     DialogTypeInput,
     DialogTypeOutput
@@ -163,9 +165,13 @@ int main(int argc, char * argv[])
 
     double timestamp;
 	double frameRate = 1.0/30.0;
+	double old_ts;
+	double offset;
 
 	fprintf(stderr,"Hit esc to stop playing\n");
 	bool DEBUGFAST = false;
+	old_ts = 0.0;
+	offset = 0.0;
 	for(frameNumber = 0, timestamp = 0.; ; frameNumber++, timestamp += frameRate){
 
 		if(DEBUGFAST && frameNumber >= 3000)
@@ -200,6 +206,17 @@ int main(int argc, char * argv[])
 				frameWrite = frame;
 			}
 		}
+
+		//printf("width %d height %d\n", frameW, frameH);
+		timestamp = pg_timestamp(frame) + offset;
+		if (timestamp - old_ts < 0)
+		{
+			offset += 128.0;
+		}
+		old_ts = timestamp;
+		//printf("%f\n", timestamp);
+
+		//Writing of the actual frame (I think)
 		if(!writer->addFrame((unsigned char*) frameWrite->imageData,timestamp)){
 			fprintf(stderr,"Error adding frame %d\n",frameNumber);
 			break;
