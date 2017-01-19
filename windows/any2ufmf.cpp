@@ -25,12 +25,15 @@ bool ChooseMultiFile(std::vector<std::string>* fileName, const char dialogTitle[
 int main(int argc, char * argv[])
 {
 	bool interactiveMode = argc <= 3;
-	bool fileChoiceSuccess = true;;
+	bool fileChoiceSuccess = true;
 
-	// first argument is the input AVI
-	//char aviFileName[512][512];
-	std::vector<std::string> aviFiles;
+	char aviFileName[512];  //maintained to reduced changes
+	std::vector<std::string> aviFiles;  //holds (potentially) multiple input avi's
+
+	//Get input avi file
 	if (argc > 1) {
+		// first argument is the input AVI
+
 		//strcpy(aviFileName,argv[1]);
 		aviFiles.push_back(argv[1]);
 		//fprintf(stdout,"Input AVI file = %s\n",aviFileName);
@@ -38,6 +41,7 @@ int main(int argc, char * argv[])
 
 	}
 	else {
+		// if not run from cmd line, create dialog to select avi
 		const COMDLG_FILTERSPEC aviTypes[] =
 		{
 			{L"Audio-video Interleave Files (*.avi)",   L"*.avi"},
@@ -47,12 +51,91 @@ int main(int argc, char * argv[])
 		fileChoiceSuccess = ChooseMultiFile(&aviFiles, "Choose AVI file", aviTypes, ARRAYSIZE(aviTypes), NULL);
 
 	}
+
+	//Get output ufmf file
+	char ufmfFileName[512];
+	if (argc > 2) {
+		strcpy(ufmfFileName, argv[2]);
+		fprintf(stdout, "Output UFMF file = %s\n", ufmfFileName);
+	}
+	else {
+		const COMDLG_FILTERSPEC ufmfTypes[] =
+		{
+			{ L"Micro Fly Movie Format Files (*.ufmf)",  L"*.ufmf" },
+			{ L"All Files (*.*)",    					L"*.*" }
+		};
+
+		// choose default filename: (AVI filename substring between last backslash and last dot) + ".ufmf"
+		char defaultFileName[512];
+		strcpy(aviFileName, (aviFiles[0]).c_str());
+		strcpy(defaultFileName, aviFileName);
+		char* strLastDot = strrchr(defaultFileName, '.');
+		if (strLastDot != NULL) {
+			strcpy(strLastDot, ".ufmf");
+			char *strLastBackslash = strrchr(defaultFileName, '\\');
+			if (strLastBackslash != NULL) {
+				char tmp[512];
+				strcpy(tmp, &defaultFileName[strLastBackslash + 1 - defaultFileName]);
+				strcpy(defaultFileName, tmp);
+			}
+
+			fileChoiceSuccess = ChooseFile(ufmfFileName, "Choose output file", ufmfTypes, ARRAYSIZE(ufmfTypes), DialogTypeOutput, defaultFileName);
+		}
+		else {
+			fileChoiceSuccess = ChooseFile(ufmfFileName, "Choose output file", ufmfTypes, ARRAYSIZE(ufmfTypes), DialogTypeOutput);
+		}
+	}
+
+	// test output file
+	if (!fileChoiceSuccess || strlen(ufmfFileName) == 0) {
+		if (!interactiveMode)
+			fprintf(stderr, "Empty output filename specified. Aborting.\n");
+		return 1;
+	}
+
+	// attempt to open output ufmf file
+	FILE *fp = fopen(ufmfFileName, "w");
+	if (fp == NULL) {
+		if (interactiveMode) {
+			MessageBox(NULL, "Error opening output file. Exiting.", NULL, MB_OK);
+		}
+		else {
+			fprintf(stderr, "Error opening output file\n");
+		}
+		return 1;
+	}
+	fclose(fp);
+
+	//Get parameters file
+	char ufmfParamsFileName[512];
+	if (argc > 3) {
+		strcpy(ufmfParamsFileName, argv[3]);
+		fprintf(stdout, "UFMF Compression Parameters file = %s\n", ufmfParamsFileName);
+	}
+	else {
+		int choice = MessageBox(NULL, "Select a custom parameters file?", "Specify parameters?", MB_YESNO);
+		if (choice == IDYES) {
+			const COMDLG_FILTERSPEC ufmfParamTypes[] =
+			{
+				{ L"Text Files (*.txt)", L"*.txt" },
+				{ L"All Files (*.*)",    L"*.*" }
+			};
+			ChooseFile(ufmfParamsFileName, "Choose parameters file", ufmfParamTypes, ARRAYSIZE(ufmfParamTypes), DialogTypeInput);
+		}
+		else
+			ufmfParamsFileName[0] = '\0';
+	}
+
+	double old_ts = 0.0;
+	double offset = 0.0;
+	ufmfWriter * writer;
 	std::vector<std::string>::const_iterator i;
+
+	//Loop over each of the selected videos
 	for (i = aviFiles.begin(); i != aviFiles.end(); i++)
 	{
-		char aviFileName[512];
-		strcpy(aviFileName, (*i).c_str());
-
+		strcpy(aviFileName, (*i).c_str());  //copy current avi file name into char array 
+											//(makes things back compatible with existing code)
 
 		// test input file
 		if (!fileChoiceSuccess || strlen(aviFileName) == 0) {
@@ -61,7 +144,7 @@ int main(int argc, char * argv[])
 			return 1;
 		}
 
-		// input avi
+		// open input avi
 		CvCapture* capture = cvCaptureFromAVI(aviFileName);
 		if (capture == NULL) {
 			if (interactiveMode) {
@@ -73,78 +156,6 @@ int main(int argc, char * argv[])
 			return 1;
 		}
 
-		// output ufmf
-		char ufmfFileName[512];
-		if (argc > 2) {
-			strcpy(ufmfFileName, argv[2]);
-			fprintf(stdout, "Output UFMF file = %s\n", ufmfFileName);
-		}
-		else {
-			const COMDLG_FILTERSPEC ufmfTypes[] =
-			{
-				{L"Micro Fly Movie Format Files (*.ufmf)",  L"*.ufmf"},
-				{L"All Files (*.*)",    					L"*.*"}
-			};
-
-			// choose default filename: (AVI filename substring between last backslash and last dot) + ".ufmf"
-			char defaultFileName[512];
-			strcpy(defaultFileName, aviFileName);
-			char* strLastDot = strrchr(defaultFileName, '.');
-			if (strLastDot != NULL) {
-				strcpy(strLastDot, ".ufmf");
-				char *strLastBackslash = strrchr(defaultFileName, '\\');
-				if (strLastBackslash != NULL) {
-					char tmp[512];
-					strcpy(tmp, &defaultFileName[strLastBackslash + 1 - defaultFileName]);
-					strcpy(defaultFileName, tmp);
-				}
-
-				fileChoiceSuccess = ChooseFile(ufmfFileName, "Choose output file", ufmfTypes, ARRAYSIZE(ufmfTypes), DialogTypeOutput, defaultFileName);
-			}
-			else {
-				fileChoiceSuccess = ChooseFile(ufmfFileName, "Choose output file", ufmfTypes, ARRAYSIZE(ufmfTypes), DialogTypeOutput);
-			}
-		}
-
-		// test output file
-		if (!fileChoiceSuccess || strlen(ufmfFileName) == 0) {
-			if (!interactiveMode)
-				fprintf(stderr, "Empty output filename specified. Aborting.\n");
-			return 1;
-		}
-
-		FILE *fp = fopen(ufmfFileName, "w");
-		if (fp == NULL) {
-			if (interactiveMode) {
-				MessageBox(NULL, "Error opening output file. Exiting.", NULL, MB_OK);
-			}
-			else {
-				fprintf(stderr, "Error opening output file\n");
-			}
-			return 1;
-		}
-		fclose(fp);
-
-		// parameters
-		char ufmfParamsFileName[512];
-		if (argc > 3) {
-			strcpy(ufmfParamsFileName, argv[3]);
-			fprintf(stdout, "UFMF Compression Parameters file = %s\n", ufmfParamsFileName);
-		}
-		else {
-			int choice = MessageBox(NULL, "Select a custom parameters file?", "Specify parameters?", MB_YESNO);
-			if (choice == IDYES) {
-				const COMDLG_FILTERSPEC ufmfParamTypes[] =
-				{
-					{L"Text Files (*.txt)", L"*.txt"},
-					{L"All Files (*.*)",    L"*.*"}
-				};
-				ChooseFile(ufmfParamsFileName, "Choose parameters file", ufmfParamTypes, ARRAYSIZE(ufmfParamTypes), DialogTypeInput);
-			}
-			else
-				ufmfParamsFileName[0] = '\0';
-		}
-
 		// get avi frame size
 		cvQueryFrame(capture); // this call is necessary to get correct capture properties
 		unsigned __int32 frameH = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT);
@@ -153,19 +164,22 @@ int main(int argc, char * argv[])
 		fprintf(stderr, "Number of frames in the video: %f\n", nFrames);
 
 		// log file
-		//FILE * logFID = fopen("C:\\Code\\imaq\\any2ufmf\\out\\log.txt","w");
-		FILE * logFID = stderr;
+		//FILE * logFID = fopen("C:\\Code\\imaq\\any2ufmf\\out\\log.txt","w");  //output errors to file
+		FILE * logFID = stderr;  //output errors to console
 
-		// output ufmf
-		ufmfWriter * writer = new ufmfWriter(ufmfFileName, frameW, frameH, logFID, ufmfParamsFileName);
-		if (!writer->startWrite()) {
-			if (interactiveMode) {
-				MessageBox(NULL, "Error initializing uFMF writer. Exiting.", NULL, MB_OK);
+		// create output ufmf writer if first video in series
+		if (i == aviFiles.begin())
+		{
+			writer = new ufmfWriter(ufmfFileName, frameW, frameH, logFID, ufmfParamsFileName);
+			if (!writer->startWrite()) {
+				if (interactiveMode) {
+					MessageBox(NULL, "Error initializing uFMF writer. Exiting.", NULL, MB_OK);
+				}
+				else {
+					fprintf(stderr, "Error starting write\n");
+				}
+				return 1;
 			}
-			else {
-				fprintf(stderr, "Error starting write\n");
-			}
-			return 1;
 		}
 
 		// start preview thread
@@ -179,18 +193,17 @@ int main(int argc, char * argv[])
 
 		double timestamp;
 		double frameRate = 1.0 / 30.0;
-		double old_ts;
-		double offset;
 
 		fprintf(stderr, "Hit esc to stop playing\n");
 		bool DEBUGFAST = false;
-		old_ts = 0.0;
-		offset = 0.0;
+
+		//Loop over each frame of an individual video
 		for (frameNumber = 0, timestamp = 0.; ; frameNumber++, timestamp += frameRate) {
 
 			if (DEBUGFAST && frameNumber >= 3000)
+			{
 				break;
-
+			}
 			if ((frameNumber % 100) == 0) {
 				fprintf(stderr, "** frame %lu\n", frameNumber);
 			}
@@ -199,9 +212,15 @@ int main(int argc, char * argv[])
 				fprintf(stderr, "Error waiting for preview thread to unlock\n");
 				break;
 			}
+
+			//Read in frame data from avi
 			if (!DEBUGFAST || (frame == NULL))
+			{
 				frame = cvQueryFrame(capture);
+			}
+
 			//frameNumber++;
+
 			if (!DEBUGFAST) ReleaseSemaphore(lock, 1, NULL);
 			if (!frame) {
 				fprintf(stderr, "Last frame read = %d\n", frameNumber);
@@ -211,6 +230,7 @@ int main(int argc, char * argv[])
 				break;
 			}
 
+			// Convert frame if necessary
 			if (!DEBUGFAST || frameWrite == NULL) {
 				if (frame->nChannels > 1) {
 					cvCvtColor(frame, grayFrame, CV_RGB2GRAY);
@@ -221,7 +241,7 @@ int main(int argc, char * argv[])
 				}
 			}
 
-			//printf("width %d height %d\n", frameW, frameH);
+			//Unwrap time embedded time stamps
 			timestamp = pg_timestamp(frame) + offset;
 			if (timestamp - old_ts < 0)
 			{
@@ -230,21 +250,12 @@ int main(int argc, char * argv[])
 			old_ts = timestamp;
 			//printf("%f\n", timestamp);
 
-			//Writing of the actual frame (I think)
+			// Write the frame to the ufmf checking for error
 			if (!writer->addFrame((unsigned char*)frameWrite->imageData, timestamp)) {
 				fprintf(stderr, "Error adding frame %d\n", frameNumber);
 				break;
 			}
 
-		}
-
-		if (!writer->stopWrite()) {
-			fprintf(stderr, "Error stopping writing\n");
-			if (interactiveMode) {
-				fprintf(stderr, "Hit enter to exit\n");
-				getc(stdin);
-			}
-			return 1;
 		}
 
 		if (!preview->stop()) {
@@ -269,17 +280,24 @@ int main(int argc, char * argv[])
 			cvReleaseImage(&grayFrame);
 			grayFrame = NULL;
 		}
-		if (writer != NULL) {
-			delete writer;
-		}
 
 		if (interactiveMode) {
 			fprintf(stderr, "Hit enter to exit\n");
 			getc(stdin);
 		}
-
-		return 0;
 	}
+	if (!writer->stopWrite()) {
+		fprintf(stderr, "Error stopping writing\n");
+		if (interactiveMode) {
+			fprintf(stderr, "Hit enter to exit\n");
+			getc(stdin);
+		}
+		return 1;
+	}
+	if (writer != NULL) {
+		delete writer;
+	}
+	return 0;
 }
 
 
@@ -403,9 +421,6 @@ bool ChooseFile(char fileName[], const char dialogTitle[], const COMDLG_FILTERSP
 
 	return SUCCEEDED(hr);
 }
-
-
-
 
 bool ChooseMultiFile(std::vector<std::string>* fileName, const char dialogTitle[], const COMDLG_FILTERSPEC filterSpec[], int nFilters, char defaultFileName[])
 {
