@@ -219,13 +219,13 @@ int main(int argc, char * argv[])
 				frame = cvQueryFrame(capture);
 			}
 
-			//frameNumber++;
-
 			if (!DEBUGFAST) ReleaseSemaphore(lock, 1, NULL);
 			if (!frame) {
 				fprintf(stderr, "Last frame read = %d\n", frameNumber);
 				break;
 			}
+
+			// Send the frame to the preview window
 			if (!DEBUGFAST && !preview->setFrame(frame, frameNumber)) {
 				break;
 			}
@@ -281,10 +281,6 @@ int main(int argc, char * argv[])
 			grayFrame = NULL;
 		}
 
-		if (interactiveMode) {
-			fprintf(stderr, "Hit enter to exit\n");
-			getc(stdin);
-		}
 	}
 	if (!writer->stopWrite()) {
 		fprintf(stderr, "Error stopping writing\n");
@@ -296,6 +292,11 @@ int main(int argc, char * argv[])
 	}
 	if (writer != NULL) {
 		delete writer;
+	}
+	
+	if (interactiveMode) {
+		fprintf(stderr, "Hit enter to exit\n");
+		getc(stdin);
 	}
 	return 0;
 }
