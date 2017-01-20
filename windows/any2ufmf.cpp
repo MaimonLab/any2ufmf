@@ -156,8 +156,11 @@ int main(int argc, char * argv[])
 			return 1;
 		}
 
+		// declare variable to hold frame data
+		IplImage * frame = NULL;
+
 		// get avi frame size
-		cvQueryFrame(capture); // this call is necessary to get correct capture properties
+		frame = cvQueryFrame(capture); // this call is necessary to get correct capture properties
 		unsigned __int32 frameH = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT);
 		unsigned __int32 frameW = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH);
 		double nFrames = cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_COUNT);
@@ -186,7 +189,6 @@ int main(int argc, char * argv[])
 		HANDLE lock = CreateSemaphore(NULL, 1, 1, NULL);
 		previewVideo * preview = new previewVideo(lock);
 
-		IplImage * frame = NULL;
 		unsigned __int64 frameNumber;
 		IplImage * frameWrite = NULL;
 		IplImage * grayFrame = cvCreateImage(cvSize(frameW, frameH), IPL_DEPTH_8U, 1);
@@ -214,9 +216,11 @@ int main(int argc, char * argv[])
 			}
 
 			//Read in frame data from avi
-			if (!DEBUGFAST || (frame == NULL))
-			{
-				frame = cvQueryFrame(capture);
+			if (frameNumber != 0) {
+				if (!DEBUGFAST || (frame == NULL))
+				{
+					frame = cvQueryFrame(capture);
+				}
 			}
 
 			if (!DEBUGFAST) ReleaseSemaphore(lock, 1, NULL);
@@ -246,6 +250,7 @@ int main(int argc, char * argv[])
 			if (timestamp - old_ts < 0)
 			{
 				offset += 128.0;
+				timestamp = pg_timestamp(frame) + offset;
 			}
 			old_ts = timestamp;
 			//printf("%f\n", timestamp);
