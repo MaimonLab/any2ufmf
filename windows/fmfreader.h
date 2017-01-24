@@ -19,6 +19,12 @@ class fmfreader {
 	typedef unsigned long long uint64;
 
 public:
+	fmfreader();  //default constructor
+	void fmf_open(char* filename);  //sets and opens an fmf movie (must be done first!)
+	void fmf_close();  //closes the file pointer to the fmf movie
+	uint32 fmf_get_fwidth() { return nc; };  //returns width of frame
+	uint32 fmf_get_fheight() { return nr; };  //returns height of frame
+	uint64 fmf_get_nframes() { return nframes; };  //returns number of frames in movie
 	void fmf_read_header();  //reads in fmf header information, storing in class variables
 	void fmf_read_frame(int frame, uint8_t * buf);  //reads in frame number 'frame' into buf
 

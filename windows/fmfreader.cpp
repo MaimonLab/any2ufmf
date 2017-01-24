@@ -1,5 +1,36 @@
 #include "fmfreader.h"
 
+fmfreader::fmfreader()
+{
+	fmffp = 0;
+}
+
+/* fmf_open:
+Opens an fmf movie
+*/
+void fmfreader::fmf_open(char *infilename)
+{
+	//FILE * fp = fopen(infilename, "rb");
+	
+	fmffp = fopen(infilename, "rb");
+	if (fmffp == 0 || fmffp == NULL) {
+		fprintf(stderr, "Could not open input fmf file %s for reading.\n",
+			infilename);
+		exit(1);
+	}
+
+	/* read in the header information */
+	fmf_read_header();
+}
+
+/* fmf_close
+Closes the file pointer
+*/
+void fmfreader::fmf_close()
+{
+	fclose(fmffp);
+}
+
 /* fmf_read_header:
 Reads the header from stream fmffp and stores information
 about the movie in the global variables defined above.
