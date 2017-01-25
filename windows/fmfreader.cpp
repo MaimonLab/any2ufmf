@@ -3,6 +3,19 @@
 fmfreader::fmfreader()
 {
 	fmffp = 0;
+	extrabuf = NULL;
+	imagebuffer = NULL;
+}
+
+fmfreader::~fmfreader()
+{
+	if (extrabuf != NULL){
+		free(extrabuf);
+	}
+	if (imagebuffer != NULL){
+
+		free(imagebuffer);
+	}
 }
 
 /* fmf_open:
@@ -21,6 +34,13 @@ void fmfreader::fmf_open(char *infilename)
 
 	/* read in the header information */
 	fmf_read_header();
+
+	/* assign the opencv specific variables*/
+	size = cvSize(fmf_get_fwidth(), fmf_get_fheight());
+	frame = cvCreateImageHeader(size, depth, channels);
+	currframe = 0;
+	imagebuffer = (uint8_t *)malloc(sizeof(uint8_t)*
+		fmf_get_fheight()*fmf_get_fwidth());
 }
 
 /* fmf_close
@@ -160,3 +180,20 @@ void fmfreader::fmf_read_frame(int frame, uint8_t * buf) {
 
 }
 
+/* fmf_queryframe:
+Works just like cvqueryframe returning the next frame of the 
+movie in IplImage format
+*/
+IplImage* fmfreader::fmf_queryframe()
+{
+	if (currframe < nframes) {
+		fmf_read_frame(currframe, imagebuffer);
+		frame->imageData = (char *)imagebuffer;
+
+		currframe++;
+	}
+	else {
+		frame = NULL;
+	}
+	return frame;
+}

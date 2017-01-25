@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include "cv.h"
 
 class fmfreader {
 	/* in the compressed output, how many bits per pixel? */
@@ -20,6 +21,7 @@ class fmfreader {
 
 public:
 	fmfreader();  //default constructor
+	~fmfreader();  //deconstructor
 	void fmf_open(char* filename);  //sets and opens an fmf movie (must be done first!)
 	void fmf_close();  //closes the file pointer to the fmf movie
 	uint32 fmf_get_fwidth() { return nc; };  //returns width of frame
@@ -27,6 +29,8 @@ public:
 	uint64 fmf_get_nframes() { return nframes; };  //returns number of frames in movie
 	void fmf_read_header();  //reads in fmf header information, storing in class variables
 	void fmf_read_frame(int frame, uint8_t * buf);  //reads in frame number 'frame' into buf
+	IplImage* fmf_queryframe();  //functions similarly to cvqueryframe (auto advances 1 frame)
+
 
 private:
 	/* pointer to fmf file stream */
@@ -57,4 +61,12 @@ private:
 	/* if isoddcols==1, then we will need an extra buffer to
 	read in the unpadded image. */
 	uint8_t * extrabuf;
+
+	//Variables used in buffer conversion to IplImage
+	uint64 currframe;
+	CvSize size;
+	int depth = IPL_DEPTH_8U;
+	int channels = 1;
+	IplImage* frame;
+	uint8_t* imagebuffer;
 };
