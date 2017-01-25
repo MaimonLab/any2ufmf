@@ -11,6 +11,8 @@
 #include "previewVideo.h"
 
 #include "pgTimeStamp.h"
+#include "fmfreader.h"
+#include <boost\filesystem.hpp>
 
 typedef enum {
 	DialogTypeInput,
@@ -45,6 +47,7 @@ int main(int argc, char * argv[])
 		const COMDLG_FILTERSPEC aviTypes[] =
 		{
 			{L"Audio-video Interleave Files (*.avi)",   L"*.avi"},
+			{L"Fly Moive Format Files (*.fmf)", L"*.fmf"},
 			{L"All Files (*.*)",    					L"*.*"}
 		};
 		//fileChoiceSuccess = ChooseFile(aviFileName, "Choose AVI file", aviTypes, ARRAYSIZE(aviTypes), DialogTypeInput);
@@ -144,26 +147,58 @@ int main(int argc, char * argv[])
 			return 1;
 		}
 
-		// open input avi
-		CvCapture* capture = cvCaptureFromAVI(aviFileName);
-		if (capture == NULL) {
+		// open input avi or fmf
+		CvCapture* capture;
+		fmfreader fmfcapture;
+		bool isfmf = false;
+		if (boost::filesystem::path(aviFileName).extension() == ".fmf") {
+			fmfcapture.fmf_open(aviFileName);
+			isfmf = true;
+		}
+		else if(boost::filesystem::path(aviFileName).extension() == ".avi") {
+			capture = cvCaptureFromAVI(aviFileName);
+			if (capture == NULL) {
+				if (interactiveMode) {
+					MessageBox(NULL, "Error reading AVI. Exiting.", NULL, MB_OK);
+				}
+				else {
+					fprintf(stderr, "Error reading AVI %s. Exiting.\n", aviFileName);
+				}
+				return 1;
+			}
+		}
+		else {
 			if (interactiveMode) {
-				MessageBox(NULL, "Error reading AVI. Exiting.", NULL, MB_OK);
+				MessageBox(NULL, "Invalid file type selected.  Exiting.", NULL, MB_OK);
 			}
 			else {
-				fprintf(stderr, "Error reading AVI %s. Exiting.\n", aviFileName);
+				fprintf(stderr, "Invalid file type selected.  Exiting.\n");
 			}
-			return 1;
 		}
 
 		// declare variable to hold frame data
 		IplImage * frame = NULL;
 
-		// get avi frame size
-		frame = cvQueryFrame(capture); // this call is necessary to get correct capture properties
-		unsigned __int32 frameH = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT);
-		unsigned __int32 frameW = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH);
-		double nFrames = cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_COUNT);
+		// Get movie info (frame size, nframes, etc)
+		unsigned __int32 frameH;
+		unsigned __int32 frameW;
+		double nFrames;
+		if (isfmf){
+			// get fmf frame info
+			frameH = fmfcapture.fmf_get_fheight();
+			frameW = fmfcapture.fmf_get_fwidth();
+			nFrames = fmfcapture.fmf_get_nframes();
+
+			frame = fmfcapture.fmf_queryframe();
+			capture = NULL;
+		}
+		else {
+			// get avi frame info
+			frame = cvQueryFrame(capture); // this call is necessary to get correct capture properties
+			frameH = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT);
+			frameW = (unsigned __int32)cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH);
+			nFrames = cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_COUNT);
+		}
 		fprintf(stderr, "Number of frames in the video: %f\n", nFrames);
 
 		// log file
@@ -219,7 +254,12 @@ int main(int argc, char * argv[])
 			if (frameNumber != 0) {
 				if (!DEBUGFAST || (frame == NULL))
 				{
-					frame = cvQueryFrame(capture);
+					if (isfmf) {
+						frame = fmfcapture.fmf_queryframe();
+					}
+					else {
+						frame = cvQueryFrame(capture);
+					}
 				}
 			}
 
