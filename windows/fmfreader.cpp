@@ -211,3 +211,30 @@ IplImage* fmfreader::fmf_queryframe()
 	}
 	return frame;
 }
+
+/*fmf_nextframe
+Reads in next frame (DOES NOT MOVE LOCATION OF READ POINTER)
+*/
+IplImage* fmfreader::fmf_nextframe()
+{
+	if (currframe < nframes) {
+		fseek(fmffp, sizeof(double), SEEK_CUR);  //skip the time stamp
+		fread(imagebuffer, sizeof(uint8_t), fmfnpixels, fmffp);  //read in image data
+		frame->imageData = (char *)imagebuffer;  //convert to IplImage
+
+		currframe++;
+	}
+	else {
+		frame = NULL;
+	}
+	return frame;
+}
+
+/*fmf_pointff
+Move the read pointer to right after the header
+*/
+void fmfreader::fmf_pointff()
+{
+	fseek(fmffp, headersize + bytesperchunk, SEEK_SET);
+	currframe = 0;
+}

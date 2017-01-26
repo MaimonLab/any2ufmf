@@ -189,7 +189,9 @@ int main(int argc, char * argv[])
 			frameW = fmfcapture.fmf_get_fwidth();
 			nFrames = fmfcapture.fmf_get_nframes();
 
-			frame = fmfcapture.fmf_queryframe();
+			//frame = fmfcapture.fmf_queryframe();
+			fmfcapture.fmf_pointff();
+			frame = fmfcapture.fmf_nextframe();
 			capture = NULL;
 		}
 		else {
@@ -255,7 +257,8 @@ int main(int argc, char * argv[])
 				if (!DEBUGFAST || (frame == NULL))
 				{
 					if (isfmf) {
-						frame = fmfcapture.fmf_queryframe();
+						frame = fmfcapture.fmf_nextframe();
+						//frame = fmfcapture.fmf_queryframe();
 					}
 					else {
 						frame = cvQueryFrame(capture);

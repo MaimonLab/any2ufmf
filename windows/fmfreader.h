@@ -32,6 +32,8 @@ public:
 	IplImage* fmf_queryframe();  //functions similarly to cvqueryframe (auto advances 1 frame)
 	bool fmf_fp_isopen();	//returns true if fmffp is not NULL
 
+	IplImage* fmf_nextframe();  //read bytes for next frame, picking up immediately where we left off
+	void fmf_pointff(); //point to start of first frame (ie. after header)
 
 private:
 	/* pointer to fmf file stream */
