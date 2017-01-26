@@ -30,6 +30,7 @@ public:
 	void fmf_read_header();  //reads in fmf header information, storing in class variables
 	void fmf_read_frame(int frame, uint8_t * buf);  //reads in frame number 'frame' into buf
 	IplImage* fmf_queryframe();  //functions similarly to cvqueryframe (auto advances 1 frame)
+	bool fmf_fp_isopen();	//returns true if fmffp is not NULL
 
 
 private:

@@ -51,6 +51,20 @@ void fmfreader::fmf_close()
 	fclose(fmffp);
 }
 
+/* fmf_fp_isopen
+Returns true if fmffp is not null
+*/
+bool fmfreader::fmf_fp_isopen()
+{
+	if (fmffp == NULL) {
+		return false;
+	}
+	else {
+		return true;
+	}
+
+}
+
 /* fmf_read_header:
 Reads the header from stream fmffp and stores information
 about the movie in the global variables defined above.
