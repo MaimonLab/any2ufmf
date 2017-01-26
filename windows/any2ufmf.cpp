@@ -321,6 +321,9 @@ int main(int argc, char * argv[])
 			capture = NULL;
 			frame = NULL;
 		}
+		if (fmfcapture.fmf_fp_isopen()) {
+			fmfcapture.fmf_close();
+		}
 		if (grayFrame != NULL) {
 			cvReleaseImage(&grayFrame);
 			grayFrame = NULL;
