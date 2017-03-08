@@ -52,7 +52,11 @@ int main(int argc, char * argv[])
 		};
 		//fileChoiceSuccess = ChooseFile(aviFileName, "Choose AVI file", aviTypes, ARRAYSIZE(aviTypes), DialogTypeInput);
 		fileChoiceSuccess = ChooseMultiFile(&aviFiles, "Choose AVI file", aviTypes, ARRAYSIZE(aviTypes), NULL);
-
+		
+		//exit if the cancel button is pressed
+		if (!fileChoiceSuccess) {
+			return 1;
+		}
 	}
 
 	//Get output ufmf file
@@ -190,7 +194,7 @@ int main(int argc, char * argv[])
 			nFrames = fmfcapture.fmf_get_nframes();
 
 			//frame = fmfcapture.fmf_queryframe();
-			fmfcapture.fmf_pointff();
+			fmfcapture.fmf_pointff();  //point to first frame
 			frame = fmfcapture.fmf_nextframe();
 			capture = NULL;
 		}
@@ -305,7 +309,7 @@ int main(int argc, char * argv[])
 			}
 
 		}
-
+		Sleep(100); // LAZY HACK!  Fix the damn threading!!!
 		if (!preview->stop()) {
 			fprintf(stderr, "Error waiting for preview thread to unlock\n");
 		}

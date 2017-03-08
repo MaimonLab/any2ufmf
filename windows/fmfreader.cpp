@@ -13,7 +13,6 @@ fmfreader::~fmfreader()
 		free(extrabuf);
 	}
 	if (imagebuffer != NULL){
-
 		free(imagebuffer);
 	}
 }
